@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Quiz App — Learning / Test</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--muted:#94a3b8;--accent:#60a5fa;--success:#16a34a;--danger:#ef4444}
+    *{box-sizing:border-box}
+    body{font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; margin:0; background:linear-gradient(180deg,#071023 0%, #071a2b 100%); color:#e6eef8; -webkit-font-smoothing:antialiased}
+    .container{max-width:900px;margin:32px auto;padding:20px}
+    header{display:flex;align-items:center;gap:16px;margin-bottom:18px}
+    .logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#7c3aed);display:flex;align-items:center;justify-content:center;font-weight:700}
+    h1{font-size:20px;margin:0}
+    .controls{display:flex;gap:12px;flex-wrap:wrap;background:var(--card);padding:14px;border-radius:12px;box-shadow:0 6px 18px rgba(3,7,18,0.6)}
+    .control{display:flex;align-items:center;gap:8px}
+    select,input[type=radio]{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted);padding:8px;border-radius:8px}
+    label{color:var(--muted);font-size:14px}
+    button.primary{background:linear-gradient(90deg,var(--accent),#7c3aed);border:none;padding:10px 14px;border-radius:10px;color:#041024;font-weight:600;cursor:pointer}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:20px;border-radius:12px;margin-top:18px;box-shadow:0 8px 30px rgba(2,6,23,0.6)}
+    .meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    .meta .score{font-weight:700}
+    .question{font-size:18px;margin:12px 0}
+    .options{display:grid;grid-template-columns:1fr;gap:10px}
+    .opt{background:rgba(255,255,255,0.02);padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);cursor:pointer}
+    .opt:hover{transform:translateY(-2px);transition:all .12s}
+    .opt.disabled{opacity:0.6;cursor:default}
+    .opt.correct{border-color:rgba(22,163,74,0.9);background:linear-gradient(90deg, rgba(22,163,74,0.06), rgba(22,163,74,0.02))}
+    .opt.wrong{border-color:rgba(239,68,68,0.9);background:linear-gradient(90deg, rgba(239,68,68,0.04), rgba(239,68,68,0.01))}
+    .controls-row{display:flex;gap:10px;align-items:center;margin-top:14px}
+    .progress{height:10px;background:rgba(255,255,255,0.04);border-radius:999px;overflow:hidden;flex:1}
+    .progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),#7c3aed);width:0%}
+    .muted{color:var(--muted);font-size:13px}
+    .footer-note{margin-top:12px;color:var(--muted);font-size:13px}
+    .result{padding:16px;border-radius:10px;background:linear-gradient(90deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));text-align:center}
+    .small{font-size:13px;color:var(--muted)}
+    @media (max-width:700px){.meta{flex-direction:column;align-items:flex-start;gap:8px}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">QZ</div>
+      <div>
+        <h1>Quiz App — Learning & Test</h1>
+        <div class="small">Pick mode → pick week / overall → start</div>
+      </div>
+    </header>
+
+    <div class="controls card">
+      <div class="control">
+        <label for="mode">Mode</label>
+        <select id="mode">
+          <option value="learning">Learning</option>
+          <option value="test">Test</option>
+        </select>
+      </div>
+
+      <div class="control">
+        <label for="week">Week</label>
+        <select id="week">
+          <option value="all">All Weeks (Overall)</option>
+        </select>
+      </div>
+
+      <div class="control">
+        <label style="opacity:0">start</label>
+        <button id="startBtn" class="primary">Start</button>
+      </div>
+
+      <div style="margin-left:auto;display:flex;align-items:center;gap:12px">
+        <div class="muted">Saved progress:</div>
+        <button id="clearSave" title="Clear saved progress" style="background:#12212b;border:none;padding:8px;border-radius:8px;color:var(--muted);cursor:pointer">Clear</button>
+      </div>
+    </div>
+
+    <div id="quizArea" class="card" style="display:none">
+      <div class="meta">
+        <div>
+          <div class="small">Mode: <span id="modeLabel"></span> • Week: <span id="weekLabel"></span></div>
+          <div class="score">Score: <span id="score">0</span>/<span id="total">0</span></div>
+        </div>
+        <div class="small">Question <span id="qIndex">0</span> of <span id="qTotal">0</span></div>
+      </div>
+
+      <div id="content">
+        <!-- question card will render here -->
+      </div>
+
+      <div class="controls-row">
+        <div class="progress" aria-hidden><i id="progressBar"></i></div>
+        <button id="nextBtn" class="primary" disabled>Next</button>
+      </div>
+
+      <div class="footer-note">Tip: In Learning mode questions keep original order. In Test both questions and options are randomized.</div>
+    </div>
+
+    <div id="endArea" class="card" style="display:none">
+      <div class="result">
+        <h2 id="endTitle">Results</h2>
+        <p id="endScore" style="font-size:18px;margin:8px 0"></p>
+        <div id="endBreakdown" class="small"></div>
+        <div style="margin-top:12px;display:flex;gap:8px;justify-content:center">
+          <button id="retryBtn" class="primary">Retry same</button>
+          <button id="homeBtn" style="background:transparent;border:1px solid rgba(255,255,255,0.06);padding:10px;border-radius:8px;color:var(--muted);cursor:pointer">Back</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // --------- QUESTIONS DATA ---------
+    // Edit this 'questions' array to add your own questions or import data.
+    // Each question object: {id, week, q, opts: [{id,text}], answer: optionId, explanation}
+
+    const questions = [
+      {id:1, week:1, q:"What is Psychology primarily concerned with?", opts:[{id:'A',text:'Study of planets'},{id:'B',text:'Study of cognitive processes & behavior'},{id:'C',text:'Study of plants'},{id:'D',text:'Study of mathematics'}], answer:'B', explanation:'Psychology studies cognitive processes and behavior.'},
+      {id:2, week:1, q:"Which experiment is John Watson famous for?", opts:[{id:'A',text:'Little Albert'},{id:'B',text:'Pavlovs dogs'},{id:'C',text:'Stanford prison'},{id:'D',text:'Bobo doll'}], answer:'A', explanation:'Watson is known for the Little Albert experiment.'},
+      {id:3, week:2, q:"Who is known as the father of modern psychology?", opts:[{id:'A',text:'Sigmund Freud'},{id:'B',text:'Wilhelm Wundt'},{id:'C',text:'John Watson'},{id:'D',text:'B.F. Skinner'}], answer:'B', explanation:'Wilhelm Wundt established the first experimental lab.'},
+      {id:4, week:2, q:"Which theory emphasizes thinking over behavior?", opts:[{id:'A',text:'Behaviorism'},{id:'B',text:'Cognitivism'},{id:'C',text:'Psychoanalysis'},{id:'D',text:'Humanism'}], answer:'B', explanation:'Cognitivism focuses on internal mental processes.'},
+      {id:5, week:3, q:"Which memory type stores events from a person\'s life?", opts:[{id:'A',text:'Procedural'},{id:'B',text:'Semantic'},{id:'C',text:'Episodic'},{id:'D',text:'Sensory'}], answer:'C', explanation:'Episodic memory stores personal events.'},
+      {id:6, week:4, q:"The \"aha\" experience when solving a problem is known as?", opts:[{id:'A',text:'Incubation'},{id:'B',text:'Insight'},{id:'C',text:'Preparation'},{id:'D',text:'Elaboration'}], answer:'B', explanation:'Insight refers to sudden understanding.'},
+      {id:7, week:5, q:"Which law describes an inverted U-shaped relationship between arousal and performance?", opts:[{id:'A',text:'Yerkes-Dodson law'},{id:'B',text:'Weber\'s law'},{id:'C',text:'Zipf\'s law'},{id:'D',text:'Hick\'s law'}], answer:'A', explanation:'Yerkes-Dodson describes optimal arousal.'},
+      {id:8, week:6, q:"Which of the following is a component of emotional intelligence?", opts:[{id:'A',text:'Empathy'},{id:'B',text:'Gravity'},{id:'C',text:'Photosynthesis'},{id:'D',text:'Thermodynamics'}], answer:'A', explanation:'Empathy is a core EI component.'},
+      {id:9, week:7, q:"Which learning orientation emphasizes reinforcement and contiguity?", opts:[{id:'A',text:'Behaviorist'},{id:'B',text:'Cognitivist'},{id:'C',text:'Humanist'},{id:'D',text:'Constructivist'}], answer:'A', explanation:'Behaviorists focus on reinforcement.'},
+      {id:10, week:8, q:"Which approach starts by posing problems rather than presenting facts?", opts:[{id:'A',text:'Inquiry-based learning'},{id:'B',text:'Lecture-based learning'},{id:'C',text:'Passive learning'},{id:'D',text:'Rote learning'}], answer:'A', explanation:'Inquiry-based learning begins with questions.'}
+    ];
+
+    // --------- App State ---------
+    const state = {
+      mode: 'learning',
+      week: 'all',
+      pool: [],
+      order: [],
+      qPointer: 0,
+      score: 0,
+      started: false
+    };
+
+    // DOM
+    const modeEl = document.getElementById('mode');
+    const weekEl = document.getElementById('week');
+    const startBtn = document.getElementById('startBtn');
+    const quizArea = document.getElementById('quizArea');
+    const content = document.getElementById('content');
+    const nextBtn = document.getElementById('nextBtn');
+    const progressBar = document.getElementById('progressBar');
+    const scoreEl = document.getElementById('score');
+    const totalEl = document.getElementById('total');
+    const qIndex = document.getElementById('qIndex');
+    const qTotal = document.getElementById('qTotal');
+    const modeLabel = document.getElementById('modeLabel');
+    const weekLabel = document.getElementById('weekLabel');
+    const endArea = document.getElementById('endArea');
+    const endTitle = document.getElementById('endTitle');
+    const endScore = document.getElementById('endScore');
+    const endBreakdown = document.getElementById('endBreakdown');
+    const retryBtn = document.getElementById('retryBtn');
+    const homeBtn = document.getElementById('homeBtn');
+    const clearSave = document.getElementById('clearSave');
+
+    // Populate week select dynamically from data
+    (function populateWeeks(){
+      const weeks = Array.from(new Set(questions.map(q=>q.week))).sort((a,b)=>a-b);
+      for(const w of weeks){
+        const opt = document.createElement('option'); opt.value = 'w'+w; opt.textContent = 'Week '+w; weekEl.appendChild(opt);
+      }
+    })();
+
+    // Utility: shuffle array
+    function shuffle(a){
+      for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}
+      return a;
+    }
+
+    // Start quiz
+    startBtn.addEventListener('click', ()=>{
+      state.mode = modeEl.value;
+      state.week = weekEl.value;
+      initPool();
+      if(state.pool.length===0){alert('No questions in the selected week.');return}
+      state.qPointer = 0; state.score = 0; state.started = true;
+      if(state.mode==='test'){
+        // randomize question order and options
+        state.order = shuffle(state.pool.map(q=>q.id));
+      } else {
+        // learning: keep original order by id ascending
+        state.order = state.pool.map(q=>q.id);
+      }
+      // for learning we keep options in original; for test we shuffle per question when rendering
+      document.getElementById('modeLabel').textContent = state.mode[0].toUpperCase()+state.mode.slice(1);
+      document.getElementById('weekLabel').textContent = state.week==='all'?'All Weeks':('Week '+state.week.replace('w',''));
+      quizArea.style.display='block'; endArea.style.display='none';
+      totalEl.textContent = state.order.length; qTotal.textContent = state.order.length;
+      renderQuestion(); saveProgress();
+    });
+
+    // init pool based on week selection
+    function initPool(){
+      if(state.week==='all') state.pool = questions.slice();
+      else {
+        const wk = parseInt(state.week.replace('w',''));
+        state.pool = questions.filter(q=>q.week===wk).slice();
+      }
+    }
+
+    // render current question
+    function renderQuestion(){
+      const qId = state.order[state.qPointer];
+      const qObj = questions.find(x=>x.id===qId);
+      qIndex.textContent = (state.qPointer+1);
+      qTotal.textContent = state.order.length;
+      scoreEl.textContent = state.score;
+      totalEl.textContent = state.order.length;
+      // progress
+      const pct = Math.round(((state.qPointer)/state.order.length)*100);
+      progressBar.style.width = pct+'%';
+
+      // build options (shuffle in test mode)
+      let opts = qObj.opts.map(o=> ({...o}));
+      if(state.mode==='test') opts = shuffle(opts);
+
+      content.innerHTML = `
+        <div class="question">${qObj.q}</div>
+        <div class="options" id="opts"></div>
+        <div class="muted" id="explain" style="margin-top:10px;display:none"></div>
+      `;
+
+      const optsEl = document.getElementById('opts');
+      for(const o of opts){
+        const btn = document.createElement('div');
+        btn.className='opt'; btn.dataset.optid = o.id; btn.innerHTML = `<strong style="margin-right:8px">${o.id}.</strong> <span>${o.text}</span>`;
+        btn.addEventListener('click', ()=> chooseOption(btn,qObj));
+        optsEl.appendChild(btn);
+      }
+
+      nextBtn.disabled = true;
+    }
+
+    // when user picks an option
+    function chooseOption(btn,qObj){
+      if(btn.classList.contains('disabled')) return;
+      // disable all for this question
+      document.querySelectorAll('.opt').forEach(el=>el.classList.add('disabled'));
+      const selected = btn.dataset.optid;
+      // mark correct / wrong
+      const optEls = document.querySelectorAll('.opt');
+      optEls.forEach(el=>{
+        if(el.dataset.optid === qObj.answer) el.classList.add('correct');
+        if(el.dataset.optid === selected && selected !== qObj.answer) el.classList.add('wrong');
+      });
+
+      // if test mode, update score
+      if(selected === qObj.answer){ state.score += 1; scoreEl.textContent = state.score; }
+
+      // show explanation / correct answer
+      const explain = document.getElementById('explain');
+      explain.style.display = 'block';
+      explain.innerHTML = `<strong>Answer:</strong> ${qObj.answer} — ${qObj.opts.find(o=>o.id===qObj.answer).text}<br><em>${qObj.explanation || ''}</em>`;
+
+      nextBtn.disabled = false;
+      saveProgress();
+    }
+
+    nextBtn.addEventListener('click', ()=>{
+      state.qPointer += 1;
+      if(state.qPointer >= state.order.length){
+        finish();
+      } else {
+        renderQuestion();
+      }
+      saveProgress();
+    });
+
+    function finish(){
+      quizArea.style.display='none'; endArea.style.display='block';
+      endTitle.textContent = (state.mode==='test')? 'Test Completed' : 'Learning Completed';
+      endScore.innerHTML = `<strong>${state.score}</strong> out of <strong>${state.order.length}</strong>`;
+      endBreakdown.innerHTML = `Mode: <em>${state.mode}</em> • Week: <em>${state.week==='all'?'All Weeks':state.week.replace('w','Week ')}</em>`;
+      // nice message
+      if(state.mode==='test'){
+        const pct = Math.round((state.score/state.order.length)*100);
+        endBreakdown.innerHTML += `<br><br>Percentage: <strong>${pct}%</strong>`;
+      }
+      // reset saved progress
+      localStorage.removeItem('quizState');
+    }
+
+    retryBtn.addEventListener('click', ()=>{
+      // restart same config
+      state.qPointer = 0; state.score = 0; quizArea.style.display='block'; endArea.style.display='none';
+      if(state.mode==='test') state.order = shuffle(state.pool.map(q=>q.id));
+      renderQuestion();
+    });
+
+    homeBtn.addEventListener('click', ()=>{
+      endArea.style.display='none'; quizArea.style.display='none';
+      // show controls (already visible) - user can start again
+    });
+
+    // Save / load progress to localStorage
+    function saveProgress(){
+      const payload = {mode: state.mode, week: state.week, order: state.order, qPointer: state.qPointer, score: state.score, poolIds: state.pool.map(p=>p.id)};
+      localStorage.setItem('quizState', JSON.stringify(payload));
+    }
+
+    function loadProgress(){
+      const raw = localStorage.getItem('quizState');
+      if(!raw) return false;
+      try{
+        const p = JSON.parse(raw);
+        // validate
+        if(!p || !p.order) return false;
+        state.mode = p.mode; state.week = p.week; state.order = p.order; state.qPointer = p.qPointer; state.score = p.score;
+        // rebuild pool from ids
+        state.pool = (p.poolIds || []).map(id=>questions.find(q=>q.id===id)).filter(Boolean);
+        // set controls accordingly
+        modeEl.value = state.mode; weekEl.value = state.week;
+        document.getElementById('modeLabel').textContent = state.mode[0].toUpperCase()+state.mode.slice(1);
+        document.getElementById('weekLabel').textContent = state.week==='all'?'All Weeks':('Week '+state.week.replace('w',''));
+        quizArea.style.display='block'; endArea.style.display='none';
+        totalEl.textContent = state.order.length; qTotal.textContent = state.order.length;
+        renderQuestion();
+        return true;
+      }catch(e){console.warn('load failed',e);return false}
+    }
+
+    // clear saved
+    clearSave.addEventListener('click', ()=>{ localStorage.removeItem('quizState'); alert('Saved progress cleared.'); });
+
+    // try load on start
+    window.addEventListener('load', ()=>{ if(loadProgress()){console.log('Progress loaded')} });
+
+  </script>
+</body>
+</html>
